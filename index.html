@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Consulta CNPJ - Dados da Empresa</title>
+    <!-- Bootstrap CSS (apenas para estilo rápido) -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- html2pdf (gerar PDF) -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js" integrity="sha512-GsLlZN/3F2ErC5ifS5QtgpiJtWd43JWSuIgh7mbzZ8zBps+dvLusV+eNQATqgA/HdeKFVgA5v3S/cIrLF7QnIg==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+    <style>
+        body {
+            background-color: #f4f7fc;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-bottom: 30px;
+        }
+        .header {
+            background: linear-gradient(135deg, #0b2b4f, #123b6e);
+            color: white;
+            padding: 25px 0;
+            margin-bottom: 30px;
+            border-radius: 0 0 15px 15px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .header h1 {
+            font-weight: 600;
+            margin-bottom: 5px;
+        }
+        .header p {
+            opacity: 0.9;
+            font-size: 1.1rem;
+        }
+        .card-custom {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 15px 30px rgba(0,0,0,0.1);
+            margin-bottom: 30px;
+        }
+        .input-group-custom {
+            max-width: 600px;
+            margin: 0 auto;
+        }
+        .info-badge {
+            background-color: #e9f0fb;
+            color: #0b2b4f;
+            border-radius: 30px;
+            padding: 8px 18px;
+            margin: 5px;
+            display: inline-block;
+            font-weight: 500;
+            font-size: 0.9rem;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .info-item {
+            background: #f9f9f9;
+            border-left: 5px solid #0b2b4f;
+            padding: 12px 18px;
+            border-radius: 12px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
+        }
+        .info-item strong {
+            color: #0b2b4f;
+            display: block;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .info-item span {
+            font-size: 1.1rem;
+            font-weight: 500;
+            color: #1a2b3c;
+            word-break: break-word;
+        }
+        .qsa-table {
+            background: #f9f9f9;
+            border-radius: 15px;
+            padding: 15px;
+            margin-top: 15px;
+        }
+        .btn-pdf {
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 30px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+            transition: all 0.2s;
+            box-shadow: 0 4px 8px rgba(220,53,69,0.3);
+        }
+        .btn-pdf:hover {
+            background: #b02a37;
+            transform: translateY(-2px);
+            box-shadow: 0 8px 12px rgba(220,53,69,0.4);
+        }
+        .btn-consult {
+            background: #0b2b4f;
+            color: white;
+            border: none;
+            border-radius: 50px;
+            padding: 12px 30px;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+        .btn-consult:hover {
+            background: #123b6e;
+            transform: translateY(-2px);
+        }
+        .footer {
+            margin-top: 40px;
+            color: #6c7a8d;
+            font-size: 0.9rem;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            margin: 30px 0;
+        }
+        .spinner {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #0b2b4f;
+            border-radius: 50%;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        #resultArea {
+            transition: all 0.3s;
+        }
+        .cnpj-mask {
+            font-family: monospace;
+            letter-spacing: 0.5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="header text-center">
+        <div class="container">
+            <h1>🔍 Consulta Nacional de CNPJ</h1>
+            <p>Razão Social • Nome Fantasia • Endereço • Telefone • Capital Social • Atividades • Sócios • e muito mais</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Área de busca -->
+        <div class="card-custom">
+            <div class="row justify-content-center">
+                <div class="col-lg-8">
+                    <div class="input-group input-group-custom">
+                        <input type="text" id="cnpjInput" class="form-control form-control-lg" placeholder="Digite o CNPJ (apenas números)" maxlength="18" value="06964249000158">
+                        <button class="btn btn-consult btn-lg" type="button" id="consultarBtn">Consultar</button>
+                    </div>
+                    <div class="text-muted mt-2 small text-center">
+                        <i class="bi bi-info-circle"></i> Exemplo: 06.964.249/0001-58 (Magazine Luiza) ou qualquer CNPJ válido
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading -->
+        <div class="loading" id="loading">
+            <div class="spinner"></div>
+            <p class="text-primary">Buscando dados na API pública...</p>
+        </div>
+
+        <!-- Área de resultado (onde os dados aparecem e serão convertidos em PDF) -->
+        <div id="resultArea" style="display: none;">
+            <div class="card-custom" id="companyDataCard">
+                <div class="d-flex justify-content-between align-items-center flex-wrap mb-4">
+                    <h2 class="mb-2" style="color: #0b2b4f; font-weight: 600;" id="nomeFantasiaDisplay">—</h2>
+                    <button class="btn btn-pdf" id="gerarPdfBtn">
+                        📄 Gerar PDF
+                    </button>
+                </div>
+                
+                <!-- Campos principais em badges (visão rápida) -->
+                <div class="mb-4" id="badgeContainer"></div>
+
+                <!-- Grade de informações detalhadas -->
+                <div class="info-grid" id="infoGrid"></div>
+
+                <!-- Quadro de sócios (QSA) -->
+                <div class="qsa-table mt-4" id="qsaSection" style="display: none;">
+                    <h5 class="mb-3" style="color: #0b2b4f;">👥 Quadro de Sócios e Administradores</h5>
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Nome</th>
+                                    <th>CPF/CNPJ</th>
+                                    <th>Qualificação</th>
+                                    <th>Entrada</th>
+                                </tr>
+                            </thead>
+                            <tbody id="qsaBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Informações adicionais que podem ser incluídas: porte, natureza jurídica, etc -->
+                <div class="mt-4 text-muted small" id="extraInfo"></div>
+            </div>
+        </div>
+
+        <!-- Rodapé com orientação -->
+        <div class="footer text-center">
+            <p>🔎 Dados fornecidos pela <strong>BrasilAPI</strong> (fonte: Receita Federal).<br>
+            Campos pesquisados: razão social, nome fantasia, CNPJ, atividade principal, capital social, endereço completo, telefone, email, porte, natureza jurídica, QSA (sócios), data de abertura, situação cadastral e muito mais.</p>
+            <p>📌 Para testar, utilize CNPJs reais como: 06964249000158 (Magazine Luiza), 33000167000101 (Banco do Brasil) ou 60862528000148 (Ambev).</p>
+        </div>
+    </div>
+
+    <!-- Bootstrap Icons (opcional) -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+
+    <script>
+        (function() {
+            // Elementos DOM
+            const cnpjInput = document.getElementById('cnpjInput');
+            const consultarBtn = document.getElementById('consultarBtn');
+            const resultArea = document.getElementById('resultArea');
+            const loadingDiv = document.getElementById('loading');
+            const nomeFantasiaDisplay = document.getElementById('nomeFantasiaDisplay');
+            const badgeContainer = document.getElementById('badgeContainer');
+            const infoGrid = document.getElementById('infoGrid');
+            const qsaSection = document.getElementById('qsaSection');
+            const qsaBody = document.getElementById('qsaBody');
+            const extraInfo = document.getElementById('extraInfo');
+            const gerarPdfBtn = document.getElementById('gerarPdfBtn');
+
+            // Máscara simples para CNPJ enquanto digita (não obrigatória, só para exibição)
+            cnpjInput.addEventListener('input', function(e) {
+                let v = e.target.value.replace(/\D/g, '');
+                if (v.length > 14) v = v.slice(0, 14);
+                // aplica máscara somente para visualização, mas o valor enviado será só números
+                if (v.length <= 14) {
+                    if (v.length <= 2) e.target.value = v;
+                    else if (v.length <= 5) e.target.value = v.replace(/^(\d{2})(\d{0,3})/, '$1.$2');
+                    else if (v.length <= 8) e.target.value = v.replace(/^(\d{2})(\d{3})(\d{0,3})/, '$1.$2.$3');
+                    else if (v.length <= 12) e.target.value = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{0,4})/, '$1.$2.$3/$4');
+                    else if (v.length <= 14) e.target.value = v.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{0,2})/, '$1.$2.$3/$4-$5');
+                }
+            });
+
+            // Função para limpar e pegar apenas números
+            function getCleanCNPJ() {
+                return cnpjInput.value.replace(/\D/g, '');
+            }
+
+            // Função para formatar CNPJ (apenas exibição)
+            function formatCNPJ(cnpj) {
+                if (!cnpj) return '';
+                const nums = cnpj.replace(/\D/g, '');
+                if (nums.length === 14) {
+                    return nums.replace(/^(\d{2})(\d{3})(\d{3})(\d{4})(\d{2})$/, '$1.$2.$3/$4-$5');
+                }
+                return cnpj;
+            }
+
+            // Mapeamento de campos e descrições para exibição
+            const fieldMap = [
+                { key: 'cnpj', label: 'CNPJ', format: (v) => formatCNPJ(v) },
+                { key: 'razao_social', label: 'Razão Social' },
+                { key: 'nome_fantasia', label: 'Nome Fantasia' },
+                { key: 'data_inicio_atividade', label: 'Abertura', format: (v) => v ? new Date(v).toLocaleDateString('pt-BR') : '—' },
+                { key: 'situacao_cadastral', label: 'Situação' },
+                { key: 'logradouro', label: 'Logradouro' },
+                { key: 'numero', label: 'Número' },
+                { key: 'complemento', label: 'Complemento' },
+                { key: 'bairro', label: 'Bairro' },
+                { key: 'municipio', label: 'Cidade' },
+                { key: 'uf', label: 'UF' },
+                { key: 'cep', label: 'CEP' },
+                { key: 'ddd_telefone1', label: 'Telefone 1', format: (v) => v ? v : '—' },
+                { key: 'ddd_telefone2', label: 'Telefone 2', format: (v) => v ? v : '—' },
+                { key: 'email', label: 'E-mail' },
+                { key: 'capital_social', label: 'Capital Social', format: (v) => v ? `R$ ${parseFloat(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—' },
+                { key: 'porte', label: 'Porte' },
+                { key: 'natureza_juridica', label: 'Natureza Jurídica' },
+                { key: 'atividade_principal', label: 'Atividade Principal' } // será tratado separado
+            ];
+
+            // Função para buscar dados na API
+            async function consultarCNPJ(cnpj) {
+                if (!cnpj || cnpj.length !== 14) {
+                    alert('Por favor, digite um CNPJ válido com 14 números.');
+                    return;
+                }
+
+                // Mostra loading, esconde resultado anterior
+                loadingDiv.style.display = 'block';
+                resultArea.style.display = 'none';
+
+                try {
+                    const response = await fetch(`https://brasilapi.com.br/api/cnpj/v1/${cnpj}`);
+                    if (!response.ok) {
+                        throw new Error(`Erro ${response.status}: CNPJ não encontrado ou problema na consulta.`);
+                    }
+                    const data = await response.json();
+                    preencherDados(data);
+                } catch (error) {
+                    loadingDiv.style.display = 'none';
+                    alert('Falha na consulta: ' + error.message);
+                }
+            }
+
+            function preencherDados(data) {
+                // Nome fantasia ou razão social como título
+                nomeFantasiaDisplay.innerText = data.nome_fantasia || data.razao_social || 'Empresa sem nome';
+
+                // Badges rápidas: situação, porte, capital (resumido)
+                badgeContainer.innerHTML = '';
+                const badges = [
+                    { text: `Situação: ${data.situacao_cadastral || '—'}`, class: 'bg-primary bg-opacity-10 text-primary' },
+                    { text: `Porte: ${data.porte || '—'}`, class: 'bg-success bg-opacity-10 text-success' },
+                    { text: `Capital: R$ ${data.capital_social ? parseFloat(data.capital_social).toLocaleString('pt-BR', { minimumFractionDigits: 2 }) : '—'}`, class: 'bg-warning bg-opacity-10 text-warning' }
+                ];
+                badges.forEach(b => {
+                    const span = document.createElement('span');
+                    span.className = `info-badge ${b.class}`;
+                    span.innerText = b.text;
+                    badgeContainer.appendChild(span);
+                });
+
+                // Preencher grid de informações
+                infoGrid.innerHTML = '';
+
+                // Atividade principal (array)
+                let atividadePrincipalText = '—';
+                if (data.atividade_principal && data.atividade_principal.length > 0) {
+                    const ativ = data.atividade_principal[0];
+                    atividadePrincipalText = `${ativ.code} - ${ativ.text}`;
+                }
+
+                // Adicionar cada field do fieldMap, exceto atividade principal (já tratado)
+                fieldMap.forEach(f => {
+                    if (f.key === 'atividade_principal') return; // será inserido manualmente
+                    let valor = data[f.key] !== undefined && data[f.key] !== null ? data[f.key] : '—';
+                    if (f.format) valor = f.format(valor);
+                    if (valor === '' || valor === null) valor = '—';
+                    
+                    // Evita mostrar campos vazios como complemento, etc.
+                    if (f.key === 'complemento' && valor === '—') valor = '—';
+                    
+                    addInfoItem(f.label, valor);
+                });
+
+                // Adicionar atividade principal separadamente
+                addInfoItem('Atividade Principal', atividadePrincipalText);
+
+                // Endereço completo (montado)
+                const enderecoCompleto = `${data.logradouro || ''}, ${data.numero || ''} ${data.complemento ? '- ' + data.complemento : ''} - ${data.bairro || ''}, ${data.municipio || ''} - ${data.uf || ''}, CEP: ${data.cep ? data.cep.replace(/^(\d{5})(\d{3})$/, '$1-$2') : '—'}`.replace(/\s+/g, ' ').trim();
+                if (enderecoCompleto !== ', - , —') addInfoItem('Endereço Completo', enderecoCompleto);
+
+                // QSA (sócios)
+                if (data.qsa && data.qsa.length > 0) {
+                    qsaSection.style.display = 'block';
+                    qsaBody.innerHTML = '';
+                    data.qsa.forEach(socio => {
+                        const row = document.createElement('tr');
+                        row.innerHTML = `
+                            <td><strong>${socio.nome_socio || '—'}</strong></td>
+                            <td>${socio.cnpj_cpf_do_socio || '—'}</td>
+                            <td>${socio.qualificacao_socio || '—'}</td>
+                            <td>${socio.data_entrada_sociedade ? new Date(socio.data_entrada_sociedade).toLocaleDateString('pt-BR') : '—'}</td>
+                        `;
+                        qsaBody.appendChild(row);
+                    });
+                } else {
+                    qsaSection.style.display = 'none';
+                }
+
+                // Informações extras: natureza jurídica, data situação, motivo situação
+                const extra = [];
+                if (data.natureza_juridica) extra.push(`Natureza Jurídica: ${data.natureza_juridica}`);
+                if (data.data_situacao_cadastral) extra.push(`Data da situação: ${new Date(data.data_situacao_cadastral).toLocaleDateString('pt-BR')}`);
+                if (data.motivo_situacao_cadastral) extra.push(`Motivo situação: ${data.motivo_situacao_cadastral}`);
+                if (data.ente_federativo) extra.push(`Ente federativo: ${data.ente_federativo}`);
+                if (data.situacao_especial) extra.push(`Situação especial: ${data.situacao_especial}`);
+                if (data.data_situacao_especial) extra.push(`Data situação especial: ${new Date(data.data_situacao_especial).toLocaleDateString('pt-BR')}`);
+
+                extraInfo.innerHTML = extra.join(' • ');
+
+                // Esconde loading e mostra resultado
+                loadingDiv.style.display = 'none';
+                resultArea.style.display = 'block';
+            }
+
+            function addInfoItem(label, value) {
+                const div = document.createElement('div');
+                div.className = 'info-item';
+                div.innerHTML = `<strong>${label}</strong><span>${value}</span>`;
+                infoGrid.appendChild(div);
+            }
+
+            // Evento do botão consultar
+            consultarBtn.addEventListener('click', () => {
+                const cnpjLimpo = getCleanCNPJ();
+                consultarCNPJ(cnpjLimpo);
+            });
+
+            // Permitir Enter no campo input
+            cnpjInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    consultarBtn.click();
+                }
+            });
+
+            // Gerar PDF
+            gerarPdfBtn.addEventListener('click', function() {
+                const element = document.getElementById('companyDataCard');
+                const opt = {
+                    margin:        [0.5, 0.5, 0.5, 0.5], // superior, esquerdo, inferior, direito (em polegadas)
+                    filename:     `CNPJ_${getCleanCNPJ() || 'consulta'}.pdf`,
+                    image:        { type: 'jpeg', quality: 0.98 },
+                    html2canvas:  { scale: 2, letterRendering: true },
+                    jsPDF:        { unit: 'in', format: 'a4', orientation: 'portrait' }
+                };
+                // Gerar PDF a partir do elemento
+                html2pdf().set(opt).from(element).save();
+            });
+
+            // Consulta inicial de exemplo (Magazine Luiza)
+            window.addEventListener('load', () => {
+                // Opcional: já preencher com o CNPJ do input
+                setTimeout(() => {
+                    consultarBtn.click();
+                }, 300);
+            });
+        })();
+    </script>
+</body>
+</html>
